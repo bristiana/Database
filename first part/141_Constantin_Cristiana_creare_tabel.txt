@@ -1,0 +1,488 @@
+SELECT USER FROM dual;
+--141--Constantin--Cristiana
+
+----------------------------EX 10-----------------------------------------
+
+CREATE SEQUENCE seq_participant  START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_bilet        START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_serviciu     START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_artist       START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_scena        START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_echipament   START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_melodie      START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_tip_melodie  START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_eveniment    START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_locatie      START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_tara         START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_regiune      START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+CREATE SEQUENCE seq_staff        START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
+--------------------------CREARE TABELE----------------------------------
+
+--REGIUNE
+CREATE TABLE REGIUNE (
+    id_regiune NUMBER PRIMARY KEY ,
+    denumire VARCHAR2(100) NOT NULL UNIQUE ,
+    descriere VARCHAR2(500)
+);
+
+--TARA
+CREATE TABLE TARA(
+    id_tara NUMBER PRIMARY KEY,
+    denumire VARCHAR2(100) NOT NULL UNIQUE ,
+    cod_iso VARCHAR2(3) UNIQUE,
+    limba_oficiala VARCHAR2(50),
+    id_regiune NUMBER NOT NULL,
+    CONSTRAINT fk_tara_regiune FOREIGN KEY (id_regiune) REFERENCES REGIUNE(id_regiune)
+);
+
+--LOCATIE
+
+CREATE TABLE LOCATIE(
+    id_locatie NUMBER PRIMARY KEY ,
+    denumire VARCHAR2(200) NOT NULL,
+    adresa VARCHAR2(300) NOT NULL,
+    capacitate NUMBER CHECK (capacitate > 0),
+    cod_postal VARCHAR2(20),
+    id_tara NUMBER NOT NULL,
+    CONSTRAINT fk_locatie_tara FOREIGN KEY (id_tara) REFERENCES TARA(id_tara)
+);
+
+--STAFF --supraentitate
+CREATE TABLE STAFF(
+    id_staff NUMBER PRIMARY KEY,
+    nume VARCHAR2(50) NOT NULL ,
+    prenume VARCHAR2(50) NOT NULL,
+    email VARCHAR2(100) NOT NULL UNIQUE,
+    telefon VARCHAR(15),
+    data_angajare DATE NOT NULL,
+    salariu NUMBER(10,2) CHECK (salariu > 0),
+    tip_staff VARCHAR2(20) CHECK (tip_staff IN ('ORGANIZATOR','MANAGER','SPONSOR'))
+);
+
+--ORGANIZATOR --subentitate
+
+CREATE TABLE ORGANIZATOR (
+    id_staff NUMBER PRIMARY KEY ,
+    departament VARCHAR2(100) NOT NULL,
+    nivel_experienta VARCHAR2(20) CHECK (nivel_experienta IN ('JUNIOR','MEDIU','SENIOR')),
+    CONSTRAINT fk_organizator_staff FOREIGN KEY (id_staff) REFERENCES STAFF(id_staff)
+);
+
+
+--MANAGER --subentitate
+CREATE TABLE MANAGER (
+    id_staff NUMBER PRIMARY KEY ,
+    specializare VARCHAR2(100) NOT NULL,
+    ani_experienta NUMBER CHECK (ani_experienta >= 0),
+    CONSTRAINT fk_manager_staff FOREIGN KEY (id_staff) REFERENCES STAFF(id_staff)
+);
+
+--SPONSOR --subentitate
+CREATE TABLE SPONSOR (
+    id_staff NUMBER PRIMARY KEY,
+    companie VARCHAR2(100) NOT NULL,
+    suma_sponsorizare NUMBER(12,2) CHECK (suma_sponsorizare > 0),
+    tip_parteneriat VARCHAR2(50) NOT NULL,
+    CONSTRAINT fk_sponsor_staff FOREIGN KEY (id_staff) REFERENCES STAFF(id_staff)
+);
+
+--EVENIMENT
+
+CREATE TABLE EVENIMENT (
+    id_eveniment NUMBER PRIMARY KEY,
+    denumire VARCHAR2(200) NOT NULL,
+    data_inceput DATE NOT NULL,
+    data_sfarsit DATE NOT NULL,
+    capacitate_maxima NUMBER CHECK (capacitate_maxima > 0),
+    buget NUMBER(12,2) CHECK (buget > 0),
+    id_locatie NUMBER NOT NULL,
+    id_staff NUMBER NOT NULL,
+    CONSTRAINT fk_eveniment_locatie FOREIGN KEY (id_locatie) REFERENCES LOCATIE(id_locatie),
+    CONSTRAINT fk_eveniment_staff FOREIGN KEY (id_staff) REFERENCES STAFF(id_staff),
+    CONSTRAINT check_data_eveniment CHECK (data_sfarsit >= data_inceput)
+);
+
+--SCENA
+CREATE TABLE SCENA (
+    id_scena NUMBER PRIMARY KEY,
+    denumire VARCHAR2(100) NOT NULL,
+    capacitate NUMBER CHECK (capacitate > 0),
+    suprafata NUMBER(8,2) CHECK (suprafata > 0),
+    acoperita CHAR(1) CHECK (acoperita IN ('D', 'N')),
+    id_eveniment NUMBER NOT NULL,
+    CONSTRAINT fk_scena_eveniment FOREIGN KEY (id_eveniment) REFERENCES EVENIMENT(id_eveniment)
+);
+
+--ECHIPAMENT
+
+CREATE TABLE ECHIPAMENT (
+    id_echipament NUMBER PRIMARY KEY,
+    denumire VARCHAR2(100) NOT NULL,
+    tip VARCHAR2(50) NOT NULL,
+    marca VARCHAR2(50),
+    model VARCHAR2(50),
+    an_fabricatie NUMBER(4),
+    stare VARCHAR2(20) CHECK (stare IN ('NOU', 'BUNA', 'UZATA', 'DEFECT')),
+    id_scena NUMBER NOT NULL,
+    CONSTRAINT fk_echipament_scena FOREIGN KEY (id_scena) REFERENCES SCENA(id_scena)
+);
+
+SELECT * FROM ECHIPAMENT;
+
+
+
+--ARTIST
+CREATE TABLE ARTIST (
+    id_artist NUMBER PRIMARY KEY,
+    nume_artist VARCHAR2(100) NOT NULL,
+    gen VARCHAR2(10) CHECK (gen IN ('M', 'F', 'ALTUL')),
+    data_nasterii DATE,
+    tara_origine VARCHAR2(50),
+    an_debut NUMBER(4),
+    id_scena NUMBER,
+    CONSTRAINT fk_artist_scena FOREIGN KEY (id_scena) REFERENCES SCENA(id_scena)
+);
+
+SELECT * FROM ARTIST;
+
+
+
+--MELODIE
+
+CREATE TABLE TIP_MELODIE (
+    id_tip_melodie NUMBER PRIMARY KEY,
+    denumire VARCHAR2(50) NOT NULL UNIQUE,
+    descriere VARCHAR2(500)
+);
+
+SELECT * FROM TIP_MELODIE;
+
+--MELODIE
+
+CREATE TABLE MELODIE (
+    id_melodie NUMBER PRIMARY KEY,
+    titlu VARCHAR2(200) NOT NULL,
+    durata NUMBER(5,2) CHECK (durata > 0),
+    an_lansare NUMBER(4),
+    album VARCHAR2(100),
+    id_tip_melodie NUMBER NOT NULL,
+    id_artist NUMBER NOT NULL,
+    CONSTRAINT fk_melodie_tip FOREIGN KEY (id_tip_melodie) REFERENCES TIP_MELODIE(id_tip_melodie),
+    CONSTRAINT fk_melodie_artist FOREIGN KEY (id_artist) REFERENCES ARTIST(id_artist)
+);
+
+SELECT * FROM MELODIE;
+
+
+--PARTICIPANT
+
+CREATE TABLE PARTICIPANT (
+    id_participant NUMBER PRIMARY KEY,
+    nume VARCHAR2(50) NOT NULL,
+    prenume VARCHAR2(50) NOT NULL,
+    email VARCHAR2(100) NOT NULL UNIQUE,
+    telefon VARCHAR2(15),
+    data_nasterii DATE
+);
+
+SELECT * FROM PARTICIPANT;
+
+--SERVICIU
+CREATE TABLE SERVICIU (
+    id_serviciu NUMBER PRIMARY KEY,
+    denumire VARCHAR2(50) NOT NULL UNIQUE,
+    descriere VARCHAR2(500),
+    pret_baza NUMBER(8,2) NOT NULL CHECK (pret_baza > 0)
+);
+
+SELECT * FROM SERVICIU;
+
+--BILET
+
+CREATE TABLE BILET (
+    id_bilet NUMBER PRIMARY KEY,
+    data_achizitie DATE NOT NULL,
+    pret NUMBER(8,2) NOT NULL CHECK (pret > 0),
+    cod_qr VARCHAR2(100) UNIQUE,
+    id_participant NUMBER NOT NULL,
+    id_serviciu NUMBER NOT NULL,
+    id_eveniment NUMBER NOT NULL,
+    CONSTRAINT fk_bilet_participant FOREIGN KEY (id_participant) REFERENCES PARTICIPANT(id_participant),
+    CONSTRAINT fk_bilet_serviciu FOREIGN KEY (id_serviciu) REFERENCES SERVICIU(id_serviciu),
+    CONSTRAINT fk_bilet_eveniment FOREIGN KEY (id_eveniment) REFERENCES EVENIMENT(id_eveniment)
+);
+
+SELECT * FROM BILET;
+
+
+-------------------------------------INSERARE DATE ---------------------
+
+--INSERARE IN ->REGIUNE (id_regiune, denumire,descriere)
+
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'Europa de Est', 'Regiune din estul continentului european');
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'Europa de Vest', 'Regiune din vestul continentului european');
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'Europa Centrală', 'Regiune din centrul continentului european');
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'Europa de Nord', 'Regiune din nordul continentului european');
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'Europa de Sud', 'Regiune din sudul continentului european');
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'America de Nord', 'Regiune din nordul continentului american');
+INSERT INTO REGIUNE VALUES (seq_regiune.NEXTVAL, 'Asia de Est', 'Regiune din estul continentului asiatic');
+
+SELECT * FROM REGIUNE;
+
+--INSERARE IN ->TARA (id_tara,denumire,cod_iso,limba_oficiala,id_regiune)
+
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'România', 'ROU', 'Română', 1);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Germania', 'DEU', 'Germană', 2);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Franța', 'FRA', 'Franceză', 2);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Spania', 'ESP', 'Spaniolă', 5);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Italia', 'ITA', 'Italiană', 5);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Belgia', 'BEL', 'Franceză/Flamandă', 2);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Suedia', 'SWE', 'Suedeză', 4);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Olanda', 'NLD', 'Olandeză', 2);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'SUA', 'USA', 'Engleză', 6);
+INSERT INTO TARA VALUES (seq_tara.NEXTVAL, 'Japonia', 'JPN', 'Japoneză', 7);
+
+SELECT * FROM TARA;
+
+--INSERARE IN ->LOCATIE(id_locatie ,denumire,adresa,capacitatea ,cod_posatl,id_tara)
+
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Arena Națională', 'Bulevardul Basarabia 37-39, București', 55000, '022103', 1);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Cluj Arena', 'Aleea Stadionului 2, Cluj-Napoca', 30000, '400375', 1);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Castelul Banffy', 'Bonțida, Cluj', 15000, '407105', 1);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Olympiastadion Berlin', 'Olympischer Platz 3, Berlin', 74475, '14053', 2);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Stade de France', 'Rue Henri Delaunay, Saint-Denis', 80000, '93200', 3);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'De Schorre', 'Boom', 35000, '2850', 6);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Madison Square Garden', '4 Pennsylvania Plaza, New York', 20000, '10001', 9);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Parc del Fòrum', 'Barcelona', 65000, '08019', 4);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Sziget Island', 'Budapesta', 95000, '1033', 1);
+INSERT INTO LOCATIE VALUES (seq_locatie.NEXTVAL, 'Tokyo Dome', 'Tokyo', 55000, '112-0004', 10);
+
+SELECT * FROM LOCATIE;
+
+--INSERARE IN ->STAFF(id_staff,nume,prenume,email ,telefon ,data_angajare,salariu,tip_staff)
+
+---de tip organizator
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Popescu', 'Ion', 'popescu.ion@email.com', '0712345678', TO_DATE('2020-01-15', 'YYYY-MM-DD'), 6000, 'ORGANIZATOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Vasilescu', 'Andrei', 'vasilescu.andrei@email.com', '0734567890', TO_DATE('2021-06-10', 'YYYY-MM-DD'), 5500, 'ORGANIZATOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Constantinescu', 'Mihai', 'constantinescu.mihai@email.com', '0712345670', TO_DATE('2020-05-10', 'YYYY-MM-DD'), 5800, 'ORGANIZATOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Popa', 'Adriana', 'popa.adriana@email.com', '0723456780', TO_DATE('2021-02-15', 'YYYY-MM-DD'), 5600, 'ORGANIZATOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Dumitrescu', 'Diana', 'dumitrescu.diana@email.com', '0712987654', TO_DATE('2020-08-15', 'YYYY-MM-DD'), 5700, 'ORGANIZATOR');
+
+
+
+--de tip manager
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Ionescu', 'Maria', 'ionescu.maria@email.com', '0723456789', TO_DATE('2019-03-20', 'YYYY-MM-DD'), 7500, 'MANAGER');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Georgescu', 'Elena', 'georgescu.elena@email.com', '0745678901', TO_DATE('2018-11-05', 'YYYY-MM-DD'), 8000, 'MANAGER');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Diaconu', 'Alexandru', 'diaconu.alexandru@email.com', '0734567891', TO_DATE('2019-07-20', 'YYYY-MM-DD'), 7200, 'MANAGER');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Moldovan', 'Ioana', 'moldovan.ioana@email.com', '0745678902', TO_DATE('2020-09-05', 'YYYY-MM-DD'), 6800, 'MANAGER');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Stanescu', 'Vlad', 'stanescu.vlad@email.com', '0756789013', TO_DATE('2018-12-10', 'YYYY-MM-DD'), 7500, 'MANAGER');
+
+
+--de tip sponsor
+
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Sponsor', 'Energy', 'sponsor.energy@email.com', '0767890124', TO_DATE('2020-03-15', 'YYYY-MM-DD'), 1000, 'SPONSOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Sponsor', 'Telecom', 'sponsor.telecom@email.com', '0778901235', TO_DATE('2019-11-20', 'YYYY-MM-DD'), 1000, 'SPONSOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Sponsor', 'Bank', 'sponsor.bank@email.com', '0789012346', TO_DATE('2021-01-25', 'YYYY-MM-DD'), 1000, 'SPONSOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Sponsor', 'Auto', 'sponsor.auto@email.com', '0790123457', TO_DATE('2020-07-30', 'YYYY-MM-DD'), 1000, 'SPONSOR');
+INSERT INTO STAFF VALUES (seq_staff.NEXTVAL, 'Sponsor', 'Tech', 'sponsor.tech@email.com', '0701234568', TO_DATE('2021-04-05', 'YYYY-MM-DD'), 1000, 'SPONSOR');
+
+SELECT * FROM STAFF;
+
+
+--INSERARE IN ->ORGANIZATOR(id_staff,departament,nivel_experienta)
+
+
+INSERT INTO ORGANIZATOR VALUES (1, 'Marketing', 'SENIOR');
+INSERT INTO ORGANIZATOR VALUES (3, 'Logistică', 'MEDIU');
+INSERT INTO ORGANIZATOR VALUES (7, 'Planificare Evenimente', 'SENIOR');
+INSERT INTO ORGANIZATOR VALUES (8, 'Relații Publice', 'JUNIOR');
+INSERT INTO ORGANIZATOR VALUES (14, 'Coordonare Voluntari', 'MEDIU');
+
+SELECT * FROM ORGANIZATOR;
+
+--INSERARE IN ->MANAGER(id_staff,specializare,ani_experienta)
+INSERT INTO MANAGER VALUES (2, 'Management Artiști', 10);
+INSERT INTO MANAGER VALUES (4, 'Management Financiar', 15);
+INSERT INTO MANAGER VALUES (9, 'Management Tehnic', 8);
+INSERT INTO MANAGER VALUES (10, 'Management Securitate', 12);
+INSERT INTO MANAGER VALUES (11, 'Management Relații cu Clienții', 7);
+
+SELECT * FROM MANAGER;
+
+--INSERARE IN ->SPONSOR(id_staff,companie,suma_sponsorizare,tip_parteneriat)
+INSERT INTO SPONSOR VALUES (16, 'Energy Drinks SRL', 100000, 'Principal');
+INSERT INTO SPONSOR VALUES (17, 'Telecom SA', 75000, 'Secundar');
+INSERT INTO SPONSOR VALUES (18, 'Bank Group', 120000, 'Principal');
+INSERT INTO SPONSOR VALUES (19, 'Auto Industries', 65000, 'Secundar');
+INSERT INTO SPONSOR VALUES (20, 'Tech Solutions', 85000, 'Partener Tehnic');
+
+SELECT * FROM SPONSOR;
+
+
+--INSERARE IN ->EVENIMENT(id_eveniment,denumire,data_inceput,data_sfarsit,capacitate_maxima,buget,id_locatie,id_staff)
+
+INSERT INTO EVENIMENT VALUES (seq_eveniment.NEXTVAL, 'Untold Festival', TO_DATE('2025-08-01', 'YYYY-MM-DD'), TO_DATE('2025-08-04', 'YYYY-MM-DD'), 100000, 5000000, 2, 1);
+INSERT INTO EVENIMENT VALUES (seq_eveniment.NEXTVAL, 'Electric Castle', TO_DATE('2025-07-15', 'YYYY-MM-DD'), TO_DATE('2025-07-19', 'YYYY-MM-DD'), 45000, 3000000, 3, 3);
+INSERT INTO EVENIMENT VALUES (seq_eveniment.NEXTVAL, 'Tomorrowland', TO_DATE('2025-07-21', 'YYYY-MM-DD'), TO_DATE('2025-07-30', 'YYYY-MM-DD'), 400000, 15000000, 6, 2);
+INSERT INTO EVENIMENT VALUES (seq_eveniment.NEXTVAL, 'Summer Well', TO_DATE('2025-08-10', 'YYYY-MM-DD'), TO_DATE('2025-08-11', 'YYYY-MM-DD'), 25000, 1000000, 1, 4);
+INSERT INTO EVENIMENT VALUES (seq_eveniment.NEXTVAL, 'Primavera Sound', TO_DATE('2025-06-05', 'YYYY-MM-DD'), TO_DATE('2025-06-09', 'YYYY-MM-DD'), 65000, 4500000, 8, 8);
+INSERT INTO EVENIMENT VALUES (seq_eveniment.NEXTVAL, 'Sziget Festival', TO_DATE('2025-08-05', 'YYYY-MM-DD'), TO_DATE('2025-08-12', 'YYYY-MM-DD'), 95000, 8000000, 9, 7);
+
+SELECT * FROM EVENIMENT;
+
+
+--INSERARE IN ->SCENA(id_scena,denumire,capacitate,suprafata,acoperita,id_eveniment)
+
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Main Stage', 30000, 500, 'N', 1);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Galaxy Stage', 15000, 300, 'D', 1);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Fortune Stage', 10000, 200, 'D', 1);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Main Stage', 20000, 450, 'N', 2);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Hangar Stage', 10000, 250, 'D', 2);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Main Stage', 50000, 800, 'N', 3);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Freedom Stage', 25000, 400, 'D', 3);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Core Stage', 15000, 300, 'D', 3);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Main Stage', 15000, 350, 'N', 4);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Escenario Barcelona', 25000, 500, 'N', 5);
+INSERT INTO SCENA VALUES (seq_scena.NEXTVAL, 'Main Stage', 35000, 600, 'N', 6);
+
+SELECT * FROM SCENA;
+
+
+--INSERARE IN ->ECHIPAMENT (id_echipament,denumire,tip,marca,model,an_fabricatie,stare,id_scena)
+
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de sunet Meyer Sound', 'SUNET', 'Meyer Sound', 'LEO', 2021, 'NOU', 1);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de lumini Martin', 'LUMINI', 'Martin', 'MAC Quantum Profile', 2020, 'BUNA', 1);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Generator electric', 'ALIMENTARE', 'Caterpillar', 'XQ1250', 2022, 'NOU', 1);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de sunet L-Acoustics', 'SUNET', 'L-Acoustics', 'K1', 2019, 'BUNA', 2);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de lumini Robe', 'LUMINI', 'Robe', 'BMFL Blade', 2018, 'UZATA', 2);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de sunet D&B Audiotechnik', 'SUNET', 'D&B', 'J-Series', 2021, 'BUNA', 3);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de sunet Adamson', 'SUNET', 'Adamson', 'E15', 2020, 'BUNA', 4);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem de lumini Clay Paky', 'LUMINI', 'Clay Paky', 'Sharpy', 2017, 'UZATA', 4);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Ecran LED', 'VIDEO', 'Samsung', 'The Wall', 2022, 'NOU', 5);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Mixer audio digital', 'SUNET', 'Avid', 'S6L', 2020, 'BUNA', 6);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Sistem efecte pirotehnice', 'EFECTE', 'PyroSystems', 'FireBurst Pro', 2021, 'BUNA', 6);
+INSERT INTO ECHIPAMENT VALUES (seq_echipament.NEXTVAL, 'Generator de ceață', 'EFECTE', 'Look Solutions', 'Viper NT', 2019, 'DEFECT', 7);
+
+
+SELECT * FROM ECHIPAMENT;
+
+--INSERARE IN ->ARTIST(id_artits , nume_artits,gen ,data_nasterii,tara_origine, an_debut,id_scena)
+
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'David Guetta', 'M', TO_DATE('1967-11-07', 'YYYY-MM-DD'), 'Franța', 2000, 1);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Martin Garrix', 'M', TO_DATE('1996-05-14', 'YYYY-MM-DD'), 'Olanda', 2012, 1);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Armin van Buuren', 'M', TO_DATE('1976-12-25', 'YYYY-MM-DD'), 'Olanda', 1995, 1);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Charlotte de Witte', 'F', TO_DATE('1992-07-21', 'YYYY-MM-DD'), 'Belgia', 2010, 2);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Amelie Lens', 'F', TO_DATE('1990-05-31', 'YYYY-MM-DD'), 'Belgia', 2014, 2);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Black Coffee', 'M', TO_DATE('1976-03-11', 'YYYY-MM-DD'), 'Africa de Sud', 2005, 3);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Coldplay', 'M', TO_DATE('1996-01-16', 'YYYY-MM-DD'), 'Marea Britanie', 1996, 4);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Billie Eilish', 'F', TO_DATE('2001-12-18', 'YYYY-MM-DD'), 'SUA', 2016, 4);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'The Weeknd', 'M', TO_DATE('1990-02-16', 'YYYY-MM-DD'), 'Canada', 2010, 4);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Dua Lipa', 'F', TO_DATE('1995-08-22', 'YYYY-MM-DD'), 'Marea Britanie', 2015, 6);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Inna', 'F', TO_DATE('1986-10-16', 'YYYY-MM-DD'), 'România', 2008, 9);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Afrojack', 'M', TO_DATE('1987-09-09', 'YYYY-MM-DD'), 'Olanda', 2006, 6);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Dimitri Vegas & Like Mike', 'M', TO_DATE('1982-05-19', 'YYYY-MM-DD'), 'Belgia', 2007, 6);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Solomun', 'M', TO_DATE('1975-12-27', 'YYYY-MM-DD'), 'Bosnia și Herțegovina', 2005, 7);
+INSERT INTO ARTIST VALUES (seq_artist.NEXTVAL, 'Carl Cox', 'M', TO_DATE('1962-07-29', 'YYYY-MM-DD'), 'Marea Britanie', 1985, 8);
+
+
+SELECT * FROM ARTIST;
+
+--INSERARE IN ->TIP_MELODIE(id_tip_melodie,denumire,descriere)
+
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'EDM', 'Electronic Dance Music, muzică electronică destinată pentru cluburi și festivaluri');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'Techno', 'Gen de muzică electronică caracterizat prin ritmuri repetitive și sunete sintetizate');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'House', 'Gen de muzică electronică de dans cu ritm între 120-130 BPM');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'Trance', 'Gen de muzică electronică caracterizat prin tempo-uri de 125-150 BPM și armonii repetitive');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'Pop', 'Muzică comercială populară cu versuri și structură convenționala');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'Rock', 'Gen muzical caracterizat prin utilizarea instrumentelor precum chitara electrică și tobe');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'Hip-Hop', 'Gen muzical dezvoltat în anii 1970 caracterizat prin versuri rimate și beat-uri');
+INSERT INTO TIP_MELODIE VALUES (seq_tip_melodie.NEXTVAL, 'R&B', 'Rhythm and Blues, gen muzical combinând jazz, gospel și blues');
+
+
+SELECT * FROM TIP_MELODIE;
+
+
+--INSERARE IN ->MELODIE(id_melodei,titlu,durata,an_lasare,album_id_tip_melodie,id_artits)
+
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Titanium', 4.05, 2011, 'Nothing but the Beat', 1, 1);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Animals', 3.12, 2013, 'Gold Skies', 1, 2);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'This Is What It Feels Like', 5.42, 2013, 'Intense', 4, 3);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Formula', 6.23, 2019, 'Formula EP', 2, 4);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Higher', 5.38, 2020, 'Leavin Reality', 2, 5);
+
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Superman', 8.03, 2016, 'Pieces of Me', 3, 6);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Viva La Vida', 4.02, 2008, 'Viva la Vida or Death and All His Friends', 6, 7);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Bad Guy', 3.14, 2019, 'When We All Fall Asleep, Where Do We Go?', 5, 8);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Blinding Lights', 3.20, 2020, 'After Hours', 5, 9);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Don''t Start Now', 3.03, 2019, 'Future Nostalgia', 5, 10);
+
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Hot', 3.37, 2009, 'Hot', 1, 11);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Ten Feet Tall', 3.16, 2014, 'Forget the World', 1, 12);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'The Hum', 5.14, 2015, 'Bringing The World The Madness', 1, 13);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Home', 8.42, 2018, 'Nobody Is Not Loved', 3, 14);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Pure (Intec)', 7.24, 2011, 'All Roads Lead to the Dancefloor', 2, 15);
+
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Hey Mama', 3.12, 2015, 'Listen', 1, 1);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'In The Name Of Love', 3.26, 2016, 'Seven', 1, 2);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Blah Blah Blah', 3.14, 2018, 'Balance', 4, 3);
+INSERT INTO MELODIE VALUES (seq_melodie.NEXTVAL, 'Amazing', 3.21, 2009, 'Hot', 1, 11);
+
+SELECT * FROM MELODIE;
+
+--INSERARE IN ->PARTICIPANT(id-participant,nume,prenume,email.telefon,data_nasterii)
+
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Stan', 'Mihai', 'stan.mihai@email.com', '0723456789', TO_DATE('1990-07-22', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Dinu', 'Andreea', 'dinu.andreea@email.com', '0734567890', TO_DATE('1998-11-05', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Ștefan', 'Tudor', 'stefan.tudor@email.com', '0745678901', TO_DATE('1993-05-19', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Radu', 'Cristina', 'radu.cristina@email.com', '0756789012', TO_DATE('1997-02-28', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Munteanu', 'Alexandru', 'munteanu.alex@email.com', '0767890123', TO_DATE('1992-08-10', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Constantinescu', 'Ioana', 'constantinescu.ioana@email.com', '0778901234', TO_DATE('1994-12-03', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Marinescu', 'Bogdan', 'marinescu.bogdan@email.com', '0789012345', TO_DATE('1991-06-17', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Iordache', 'Diana', 'iordache.diana@email.com', '0790123456', TO_DATE('1996-09-25', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Andrei', 'Gabriel', 'andrei.gabriel@email.com', '0701234567', TO_DATE('1989-04-11', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Niculescu', 'Elena', 'niculescu.elena@email.com', '0712345670', TO_DATE('1999-01-08', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Stoica', 'Marius', 'stoica.marius@email.com', '0723456780', TO_DATE('1990-10-14', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Dobre', 'Simona', 'dobre.simona@email.com', '0734567800', TO_DATE('1993-07-30', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Florea', 'Daniel', 'florea.daniel@email.com', '0745678900', TO_DATE('1988-03-22', 'YYYY-MM-DD'));
+INSERT INTO PARTICIPANT VALUES (seq_participant.NEXTVAL, 'Rusu', 'Adriana', 'rusu.adriana@email.com', '0756789000', TO_DATE('1995-12-19', 'YYYY-MM-DD'));
+
+
+SELECT * FROM PARTICIPANT;
+
+--INSERARE IN ->SERVICIU(id_serviciu,denumire,descriere,pret_baza)
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'Standard', 'Acces general la festival, fără beneficii extra', 150);
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'VIP', 'Acces în zone VIP, băuturi gratuite, acces la vestiare private', 300);
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'Ultra VIP', 'Acces backstage, întâlniri cu artiștii, mese și băuturi incluse', 500);
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'Early Bird', 'Acces general la festival, preț redus pentru achiziții timpurii', 120);
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'Premium', 'Acces în zone premium, băuturi non-alcoolice gratuite', 250);
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'Family', 'Acces pentru familii cu zone dedicate și activități pentru copii', 400);
+INSERT INTO SERVICIU VALUES (seq_serviciu.NEXTVAL, 'Student', 'Acces general la prețuri reduse pentru studenți cu carnet valid', 100);
+
+SELECT * FROM SERVICIU;
+
+--INSERARE IN ->BILET
+
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-15', 'YYYY-MM-DD'), 150, 'QR12345', 1, 1, 1);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-16', 'YYYY-MM-DD'), 300, 'QR12346', 2, 2, 1);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-16', 'YYYY-MM-DD'), 150, 'QR12347', 3, 1, 1);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-17', 'YYYY-MM-DD'), 500, 'QR12348', 4, 3, 2);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-18', 'YYYY-MM-DD'), 120, 'QR12349', 5, 4, 2);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-19', 'YYYY-MM-DD'), 120, 'QR12350', 6, 4, 3);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-20', 'YYYY-MM-DD'), 300, 'QR12351', 7, 2, 3);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-21', 'YYYY-MM-DD'), 250, 'QR12352', 8, 5, 4);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-21', 'YYYY-MM-DD'), 400, 'QR12353', 9, 6, 4);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-22', 'YYYY-MM-DD'), 150, 'QR12354', 10, 1, 5);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-22', 'YYYY-MM-DD'), 100, 'QR12355', 11, 7, 5);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-23', 'YYYY-MM-DD'), 300, 'QR12356', 12, 2, 5);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-24', 'YYYY-MM-DD'), 150, 'QR12357', 13, 1, 6);
+INSERT INTO BILET VALUES (seq_bilet.NEXTVAL, TO_DATE('2025-02-25', 'YYYY-MM-DD'), 500, 'QR12358', 14, 3, 6);
+
+
+
+
+SELECT * FROM BILET;
+
+
+
+
